@@ -1,0 +1,10 @@
+# nvim runtime caches (regenerated on first run; don't commit)
+.config/nvim/.luarc.json
+
+# editor / OS junk
+*.swp
+*.swo
+.DS_Store
+
+# do not commit backups created by bootstrap.sh
+*.bak.*
