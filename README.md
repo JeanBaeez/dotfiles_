@@ -4,13 +4,21 @@ My shell + nvim setup, bootstrapped onto fresh Debian/Ubuntu/Kali VMs with one c
 
 ## Install
 
-On the target VM, as your regular user (NOT root):
+On the target VM, as your regular user:
 
 ```bash
 git clone <this-repo-url> ~/dotfiles
 cd ~/dotfiles
 ./bootstrap.sh
 exec zsh
+```
+
+Or with sudo / as root (installs the dotfiles for `$SUDO_USER`, falling back to root):
+
+```bash
+sudo ./bootstrap.sh
+# or, to target a specific user:
+sudo TARGET_USER=alice ./bootstrap.sh
 ```
 
 The script will:
