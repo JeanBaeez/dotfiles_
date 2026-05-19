@@ -25,9 +25,11 @@ The script will:
 
 1. Install apt packages — shell, plugins, and quality-of-life CLI tools:
    - shell: `zsh zsh-syntax-highlighting zsh-autosuggestions`
-   - files/text: `lsd bat fzf ripgrep jq ncdu tldr`
+   - files/text: `lsd bat fzf ripgrep fd-find jq ncdu tldr`
    - monitors: `htop btop`
-   - dev/git: `tmux git git-delta gh zoxide`
+   - dev/git: `tmux git git-delta gh zoxide direnv`
+   - networking: `dnsutils traceroute mtr-tiny whois net-tools rsync mosh httpie`
+   - security/misc: `age pwgen`
    - base: `curl ca-certificates tar unzip`
 2. Download the latest Neovim release tarball from GitHub and install it to `/opt/nvim` (symlink at `/usr/local/bin/nvim`). Apt's `neovim` is too old for LazyVim (needs ≥ 0.11.2).
 3. Download the latest `lazygit` release tarball into `/usr/local/bin/lazygit`.
