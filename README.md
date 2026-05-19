@@ -23,11 +23,24 @@ sudo TARGET_USER=alice ./bootstrap.sh
 
 The script will:
 
-1. `sudo apt install` the packages: `zsh zsh-syntax-highlighting zsh-autosuggestions lsd bat fzf ripgrep git curl ca-certificates tar`
-2. Download the latest Neovim release tarball from GitHub and install it to `/opt/nvim` (with a symlink at `/usr/local/bin/nvim`). Apt's `neovim` package is too old for LazyVim, which needs ≥ 0.11.2.
-3. Copy `.zshrc` and `.config/nvim/` into your `$HOME` (backing up any existing files with a `.bak.<timestamp>` suffix)
-4. `chsh -s $(which zsh)` to make zsh the default shell
-5. Run `nvim --headless "+Lazy! sync"` to pre-install plugins
+1. Install apt packages — shell, plugins, and quality-of-life CLI tools:
+   - shell: `zsh zsh-syntax-highlighting zsh-autosuggestions`
+   - files/text: `lsd bat fzf ripgrep jq ncdu tldr`
+   - monitors: `htop btop`
+   - dev/git: `tmux git git-delta gh zoxide`
+   - base: `curl ca-certificates tar unzip`
+2. Download the latest Neovim release tarball from GitHub and install it to `/opt/nvim` (symlink at `/usr/local/bin/nvim`). Apt's `neovim` is too old for LazyVim (needs ≥ 0.11.2).
+3. Download the latest `lazygit` release tarball into `/usr/local/bin/lazygit`.
+4. Copy `.zshrc` and `.config/nvim/` into your `$HOME` (backups: `.bak.<timestamp>`).
+5. `chsh -s $(which zsh)` to make zsh the default shell.
+6. Configure git to use `delta` as the diff pager.
+7. Run `nvim --headless "+Lazy! sync"` to pre-install plugins.
+
+Goodies you get in the shell:
+- `z <dir-fragment>` — jump (zoxide)
+- `lg` — lazygit
+- `cat` is `batcat`, `ls` is `lsd`
+- `delta` powers `git diff` / `git log -p`
 
 It's safe to re-run. Re-running will overwrite the dotfiles (with a fresh backup) and re-install packages (no-op if already installed).
 
