@@ -344,6 +344,12 @@ export PATH="$HOME/bin:$PATH"
 # zoxide: smarter cd. Use `z <fragment>` to jump.
 command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init zsh)"
 
+# direnv: auto-load .envrc per directory
+command -v direnv >/dev/null 2>&1 && eval "$(direnv hook zsh)"
+
+# fd: on Debian/Ubuntu the binary is `fdfind`; alias it to `fd`
+command -v fdfind >/dev/null 2>&1 && alias fd='fdfind'
+
 # lazygit alias
 command -v lazygit >/dev/null 2>&1 && alias lg='lazygit'
 

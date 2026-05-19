@@ -66,6 +66,7 @@ PACKAGES=(
   bat
   fzf
   ripgrep
+  fd-find
   jq
   ncdu
   tldr
@@ -78,6 +79,19 @@ PACKAGES=(
   git-delta
   gh
   zoxide
+  direnv
+  # networking
+  dnsutils
+  traceroute
+  mtr-tiny
+  whois
+  net-tools
+  rsync
+  mosh
+  httpie
+  # security / misc
+  age
+  pwgen
   # base
   curl
   ca-certificates
@@ -206,5 +220,6 @@ run_as_target nvim --headless "+Lazy! sync" +qa 2>/dev/null || warn "nvim plugin
 
 # --- 6. Done ----------------------------------------------------------------
 log "Bootstrap complete. Open a new shell or run: exec zsh"
-log "Goodies available: z <dir> (zoxide), lg (lazygit), btop, htop, ncdu, jq, tldr <cmd>, delta (git diff)"
+log "Goodies: z (zoxide) | lg (lazygit) | fd (fdfind) | direnv | btop/htop | ncdu | jq | tldr <cmd>"
+log "Net: dig/host/nslookup | traceroute/mtr | whois | rsync/mosh/httpie | age (encrypt) | pwgen"
 log "If lsd/batcat icons look wrong, install a Nerd Font on your terminal."
