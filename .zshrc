@@ -339,3 +339,13 @@ export PATH=/home/jeanbaeez/.opencode/bin:$PATH
 export VAULT_ADDR=https://127.0.0.1:8200
 export VAULT_CACERT=~/dev/data_dev/prod/vault-homelab/certs/ca.crt
 export PATH="$HOME/bin:$PATH"
+
+# ----- goodies (installed by ~/dotfiles/bootstrap.sh) -----
+# zoxide: smarter cd. Use `z <fragment>` to jump.
+command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init zsh)"
+
+# lazygit alias
+command -v lazygit >/dev/null 2>&1 && alias lg='lazygit'
+
+# quick reload
+alias zshreload='source ~/.zshrc'
