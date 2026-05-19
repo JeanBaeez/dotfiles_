@@ -23,10 +23,11 @@ sudo TARGET_USER=alice ./bootstrap.sh
 
 The script will:
 
-1. `sudo apt install` the packages: `zsh zsh-syntax-highlighting zsh-autosuggestions lsd bat fzf ripgrep neovim git curl ca-certificates`
-2. Copy `.zshrc` and `.config/nvim/` into your `$HOME` (backing up any existing files with a `.bak.<timestamp>` suffix)
-3. `chsh -s $(which zsh)` to make zsh the default shell
-4. Run `nvim --headless "+Lazy! sync"` to pre-install plugins
+1. `sudo apt install` the packages: `zsh zsh-syntax-highlighting zsh-autosuggestions lsd bat fzf ripgrep git curl ca-certificates tar`
+2. Download the latest Neovim release tarball from GitHub and install it to `/opt/nvim` (with a symlink at `/usr/local/bin/nvim`). Apt's `neovim` package is too old for LazyVim, which needs ≥ 0.11.2.
+3. Copy `.zshrc` and `.config/nvim/` into your `$HOME` (backing up any existing files with a `.bak.<timestamp>` suffix)
+4. `chsh -s $(which zsh)` to make zsh the default shell
+5. Run `nvim --headless "+Lazy! sync"` to pre-install plugins
 
 It's safe to re-run. Re-running will overwrite the dotfiles (with a fresh backup) and re-install packages (no-op if already installed).
 

@@ -64,15 +64,44 @@ PACKAGES=(
   bat
   fzf
   ripgrep
-  neovim
   git
   curl
   ca-certificates
+  tar
 )
+# Neovim is installed from upstream tarball below — apt's version is too old for LazyVim (needs >= 0.11.2).
 
 log "Updating apt and installing packages: ${PACKAGES[*]}"
 $SUDO apt-get update -y
 $SUDO apt-get install -y "${PACKAGES[@]}"
+
+# --- 2b. Install latest Neovim from upstream --------------------------------
+install_neovim() {
+  local arch nvim_arch
+  arch="$(uname -m)"
+  case "$arch" in
+    x86_64)         nvim_arch="x86_64" ;;
+    aarch64|arm64)  nvim_arch="arm64" ;;
+    *) warn "Unsupported arch '$arch' for Neovim binary; skipping"; return 0 ;;
+  esac
+
+  local url="https://github.com/neovim/neovim/releases/latest/download/nvim-linux-${nvim_arch}.tar.gz"
+  local tmpdir
+  tmpdir="$(mktemp -d)"
+
+  log "Downloading Neovim ($nvim_arch) from $url"
+  curl -fsSL "$url" -o "$tmpdir/nvim.tar.gz"
+
+  $SUDO rm -rf /opt/nvim
+  $SUDO mkdir -p /opt
+  $SUDO tar -C /opt -xzf "$tmpdir/nvim.tar.gz"
+  $SUDO mv "/opt/nvim-linux-${nvim_arch}" /opt/nvim
+  $SUDO ln -sf /opt/nvim/bin/nvim /usr/local/bin/nvim
+
+  rm -rf "$tmpdir"
+  log "Neovim installed: $(/usr/local/bin/nvim --version | head -1)"
+}
+install_neovim
 
 # --- 3. Copy dotfiles into place (with backup) ------------------------------
 backup_then_copy() {
