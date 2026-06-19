@@ -36,11 +36,11 @@ function mkt(){
 function settarget(){
     ip_address=$1
     machine_name=$2
-    echo "$ip_address $machine_name" > /home/c0l1nr00t/.config/bin/target
+    echo "$ip_address $machine_name" > "$HOME/.config/bin/target"
 }
 
 function cleartarget(){
-	echo '' > /home/c0l1nr00t/.config/bin/target
+	echo '' > "$HOME/.config/bin/target"
 }
 
 
@@ -332,12 +332,15 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
 # Created by `pipx` on 2025-10-13 16:04:54
-export PATH="$PATH:/home/jeanbaeez/.local/bin"
+export PATH="$PATH:$HOME/.local/bin"
 
 # opencode
-export PATH=/home/jeanbaeez/.opencode/bin:$PATH
-export VAULT_ADDR=https://127.0.0.1:8200
-export VAULT_CACERT=~/dev/data_dev/prod/vault-homelab/certs/ca.crt
+export PATH="$HOME/.opencode/bin:$PATH"
+
+# HashiCorp Vault (uncomment and point at your own CA cert if you use Vault)
+# export VAULT_ADDR=https://127.0.0.1:8200
+# export VAULT_CACERT="$HOME/.config/vault/ca.crt"
+
 export PATH="$HOME/bin:$PATH"
 
 # ----- goodies (installed by ~/dotfiles/bootstrap.sh) -----

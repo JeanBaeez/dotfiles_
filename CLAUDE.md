@@ -50,5 +50,5 @@ Uses [Oh My Tmux!](https://github.com/gpakosz/.tmux). The large upstream `.tmux.
 ## .zshrc notes
 
 The `.zshrc` is Kali-flavored and pentest-oriented. Two things to be aware of:
-- The top section has hardcoded user-specific paths (e.g. `/home/c0l1nr00t/.config/bin/target` in `settarget`/`cleartarget`) and references to scripts that may not exist on a given host (`/usr/bin/whichSystem.py`, `enhanced-scanner.py`). These are personal/legacy and are not installed by `bootstrap.sh`.
+- It references personal/pentest scripts that may not exist on a given host (`/usr/bin/whichSystem.py`, `enhanced-scanner.py`, `/opt/persistences/...`). These are legacy and are not installed by `bootstrap.sh`. Paths use `$HOME` (not hardcoded usernames) — keep it that way for portability.
 - The portable, bootstrap-relevant additions are in the `# ----- goodies -----` section at the bottom (zoxide, direnv, `fd`→`fdfind` alias, `lg`→lazygit). Put new shell wiring there.
