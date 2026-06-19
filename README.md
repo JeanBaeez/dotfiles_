@@ -30,6 +30,7 @@ The script will:
    - dev/git: `tmux git git-delta gh zoxide direnv`
    - networking: dns utils, `traceroute mtr whois net-tools rsync mosh httpie`
    - security/misc: `age pwgen`
+   - nvim/LazyVim toolchain: `nodejs npm`, a C toolchain (`build-essential`/`gcc`+`make`/`base-devel`), `python3`+`pip`, and `go` — required so Copilot, the LSPs/formatters (Mason), and treesitter parsers actually build on a fresh VM
    - base: `curl ca-certificates tar unzip`
 
    (Exact package names are mapped per-distro inside `bootstrap.sh`; on RHEL-likes it also enables EPEL.)

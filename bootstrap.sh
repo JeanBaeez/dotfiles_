@@ -94,6 +94,9 @@ case "$PM" in
       tmux git git-delta gh zoxide direnv
       dnsutils traceroute mtr-tiny whois net-tools rsync mosh httpie
       age pwgen
+      # neovim/LazyVim toolchain: copilot + node LSPs/formatters, treesitter
+      # parser compilation (C toolchain), python & go language support
+      nodejs npm build-essential python3 python3-pip python3-venv golang-go
       curl ca-certificates tar unzip
     )
     ;;
@@ -105,6 +108,8 @@ case "$PM" in
       tmux git git-delta gh zoxide direnv
       bind-utils traceroute mtr whois net-tools rsync mosh httpie
       age pwgen
+      # neovim/LazyVim toolchain (copilot + LSPs, treesitter, python & go)
+      nodejs npm gcc gcc-c++ make python3 python3-pip golang
       curl ca-certificates tar unzip
     )
     ;;
@@ -116,6 +121,8 @@ case "$PM" in
       tmux git git-delta github-cli zoxide direnv
       bind traceroute mtr whois net-tools rsync mosh httpie
       age pwgen
+      # neovim/LazyVim toolchain (copilot + LSPs, treesitter, python & go)
+      nodejs npm base-devel python python-pip go
       curl ca-certificates tar unzip
     )
     ;;

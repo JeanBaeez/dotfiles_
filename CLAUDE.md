@@ -41,7 +41,11 @@ When adding a CLI tool: add it to **every** `PM` arm of the `PACKAGES` `case` (m
 
 ## Neovim config (`.config/nvim/`)
 
-Standard LazyVim layout. `lua/config/lazy.lua` declares the LazyVim base plus enabled `extras` (TypeScript, JSON, markdown, tailwind, eslint, prettier). Per-plugin overrides live in `lua/plugins/*.lua`; `disabled.lua` turns plugins off. `lazy-lock.json` pins plugin versions — commit it when intentionally updating plugins. AI tooling (`plugins/ai.lua`) wires up copilot.lua and an optional mcphub.nvim.
+Standard LazyVim layout. `lua/config/lazy.lua` declares the LazyVim base plus enabled `extras` (TypeScript, JSON, markdown, tailwind, eslint, prettier, **Python, Go, Terraform**). Per-plugin overrides live in `lua/plugins/*.lua`; `disabled.lua` turns plugins off. `lazy-lock.json` pins plugin versions — commit it when intentionally updating plugins. AI tooling (`plugins/ai.lua`) wires up copilot.lua and an optional mcphub.nvim.
+
+**Enabling a language extra requires two edits that must stay in sync:** add the `{ import = "lazyvim.plugins.extras.lang.<x>" }` line to `lua/config/lazy.lua` *and* the same module string to the `extras` array in `lazyvim.json` (the latter is what `:LazyExtras` tracks). Listing it in only one place means it either doesn't load or shows as unmanaged.
+
+**Toolchain dependency:** these extras + copilot are useless without their runtimes — `bootstrap.sh` installs `nodejs`/`npm` (copilot, TS/JSON/tailwind/eslint/prettier/pyright LSPs), a C compiler (treesitter parser builds), `python3`/`pip`, and `go`. Without them a fresh install throws errors on every launch (Copilot "Could not determine Node.js version", Mason install failures, treesitter compile failures). If you add a Node/compiler-dependent extra, make sure its runtime is in the `PACKAGES` lists.
 
 ## tmux config
 
