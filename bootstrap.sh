@@ -49,63 +49,91 @@ warn() { printf '\033[1;33m[!]\033[0m %s\n' "$*"; }
 
 log "Installing for user: $TARGET_USER  (home: $TARGET_HOME)"
 
-# --- 1. Detect OS / package manager -----------------------------------------
-if ! command -v apt-get >/dev/null 2>&1; then
-  echo "This script currently supports Debian/Ubuntu/Kali (apt). Aborting." >&2
+# --- 1. Detect package manager ----------------------------------------------
+# Supports Debian/Ubuntu/Kali (apt), Fedora/RHEL/Rocky/Alma (dnf), and Arch (pacman).
+if command -v apt-get >/dev/null 2>&1; then
+  PM="apt"
+elif command -v dnf >/dev/null 2>&1; then
+  PM="dnf"
+elif command -v pacman >/dev/null 2>&1; then
+  PM="pacman"
+else
+  echo "No supported package manager found (need apt, dnf, or pacman). Aborting." >&2
   exit 1
 fi
+log "Detected package manager: $PM"
+
+# Update package metadata and upgrade installed packages (OS-appropriate).
+pm_update_upgrade() {
+  case "$PM" in
+    apt)    $SUDO apt-get update -y && $SUDO DEBIAN_FRONTEND=noninteractive apt-get upgrade -y ;;
+    dnf)    $SUDO dnf -y upgrade --refresh ;;
+    pacman) $SUDO pacman -Syu --noconfirm ;;
+  esac
+}
+
+# Install one or more packages (OS-appropriate).
+pm_install() {
+  case "$PM" in
+    apt)    $SUDO DEBIAN_FRONTEND=noninteractive apt-get install -y "$@" ;;
+    dnf)    $SUDO dnf install -y "$@" ;;
+    pacman) $SUDO pacman -S --needed --noconfirm "$@" ;;
+  esac
+}
 
 # --- 2. Install packages ----------------------------------------------------
-PACKAGES=(
-  # shell + plugins
-  zsh
-  zsh-syntax-highlighting
-  zsh-autosuggestions
-  # file/text tooling
-  lsd
-  bat
-  fzf
-  ripgrep
-  fd-find
-  jq
-  ncdu
-  tldr
-  # system monitors
-  htop
-  btop
-  # dev / git / multiplexer
-  tmux
-  git
-  git-delta
-  gh
-  zoxide
-  direnv
-  # networking
-  dnsutils
-  traceroute
-  mtr-tiny
-  whois
-  net-tools
-  rsync
-  mosh
-  httpie
-  # security / misc
-  age
-  pwgen
-  # base
-  curl
-  ca-certificates
-  tar
-  unzip
-)
-# Neovim is installed from upstream tarball below — apt's version is too old for LazyVim (needs >= 0.11.2).
+# Package names differ across distros; one curated list per package manager.
+# Neovim + lazygit are installed from upstream tarballs below (distro versions
+# are often too old — LazyVim needs Neovim >= 0.11.2).
+case "$PM" in
+  apt)
+    PACKAGES=(
+      zsh zsh-syntax-highlighting zsh-autosuggestions
+      lsd bat fzf ripgrep fd-find jq ncdu tldr
+      htop btop
+      tmux git git-delta gh zoxide direnv
+      dnsutils traceroute mtr-tiny whois net-tools rsync mosh httpie
+      age pwgen
+      curl ca-certificates tar unzip
+    )
+    ;;
+  dnf)
+    PACKAGES=(
+      zsh zsh-syntax-highlighting zsh-autosuggestions
+      lsd bat fzf ripgrep fd-find jq ncdu tldr
+      htop btop
+      tmux git git-delta gh zoxide direnv
+      bind-utils traceroute mtr whois net-tools rsync mosh httpie
+      age pwgen
+      curl ca-certificates tar unzip
+    )
+    ;;
+  pacman)
+    PACKAGES=(
+      zsh zsh-syntax-highlighting zsh-autosuggestions
+      lsd bat fzf ripgrep fd jq ncdu tealdeer
+      htop btop
+      tmux git git-delta github-cli zoxide direnv
+      bind traceroute mtr whois net-tools rsync mosh httpie
+      age pwgen
+      curl ca-certificates tar unzip
+    )
+    ;;
+esac
 
-log "Updating apt and installing packages: ${PACKAGES[*]}"
-$SUDO apt-get update -y
-if ! $SUDO apt-get install -y "${PACKAGES[@]}"; then
+log "Updating system packages (update + upgrade)"
+pm_update_upgrade
+
+# RHEL-likes need EPEL for many of these tools (no-op / harmless on Fedora).
+if [[ "$PM" == "dnf" ]]; then
+  $SUDO dnf install -y epel-release 2>/dev/null || true
+fi
+
+log "Installing packages: ${PACKAGES[*]}"
+if ! pm_install "${PACKAGES[@]}"; then
   warn "Bulk install failed (likely a missing package on this distro). Retrying one at a time."
   for pkg in "${PACKAGES[@]}"; do
-    $SUDO apt-get install -y "$pkg" || warn "Skipping $pkg (not available)"
+    pm_install "$pkg" || warn "Skipping $pkg (not available)"
   done
 fi
 
@@ -195,6 +223,33 @@ if [[ "$TARGET_USER" != "$(id -un)" ]]; then
   [[ -d "$TARGET_HOME/.config" ]] && chown "$TARGET_USER:$TARGET_GROUP" "$TARGET_HOME/.config" || true
 fi
 
+# --- 3b. Install tmux config (Oh My Tmux! / gpakosz/.tmux) -------------------
+# The 99 KB upstream .tmux.conf is cloned (and updated on re-run) rather than
+# vendored; we symlink it and drop our customized .tmux.conf.local on top.
+install_tmux_config() {
+  local omt="$TARGET_HOME/.tmux"
+  if [[ -d "$omt/.git" ]]; then
+    log "Updating Oh My Tmux! in $omt"
+    run_as_target git -C "$omt" pull --ff-only || warn "tmux config update failed (keeping existing)"
+  else
+    log "Cloning Oh My Tmux! into $omt"
+    [[ -e "$omt" ]] && mv "$omt" "${omt}.bak.${TIMESTAMP}"
+    if ! run_as_target git clone --depth 1 https://github.com/gpakosz/.tmux.git "$omt"; then
+      warn "tmux config clone failed; skipping tmux setup"
+      return 0
+    fi
+  fi
+  run_as_target ln -sf "$omt/.tmux.conf" "$TARGET_HOME/.tmux.conf"
+  backup_then_copy "$DOTFILES_DIR/.tmux.conf.local" "$TARGET_HOME/.tmux.conf.local"
+  if [[ "$TARGET_USER" != "$(id -un)" ]]; then
+    chown -h "$TARGET_USER:$TARGET_GROUP" "$TARGET_HOME/.tmux.conf"
+    chown "$TARGET_USER:$TARGET_GROUP" "$TARGET_HOME/.tmux.conf.local"
+    chown -R "$TARGET_USER:$TARGET_GROUP" "$omt"
+  fi
+  log "tmux config installed (~/.tmux.conf -> $omt/.tmux.conf, local at ~/.tmux.conf.local)"
+}
+install_tmux_config
+
 # --- 4. Make zsh the default shell ------------------------------------------
 ZSH_BIN="$(command -v zsh)"
 CURRENT_SHELL="$(getent passwd "$TARGET_USER" | cut -d: -f7)"
@@ -220,6 +275,7 @@ run_as_target nvim --headless "+Lazy! sync" +qa 2>/dev/null || warn "nvim plugin
 
 # --- 6. Done ----------------------------------------------------------------
 log "Bootstrap complete. Open a new shell or run: exec zsh"
+log "tmux: Oh My Tmux! installed — prefix is C-b (and C-a); edit ~/.tmux.conf.local to customize"
 log "Goodies: z (zoxide) | lg (lazygit) | fd (fdfind) | direnv | btop/htop | ncdu | jq | tldr <cmd>"
 log "Net: dig/host/nslookup | traceroute/mtr | whois | rsync/mosh/httpie | age (encrypt) | pwgen"
 log "If lsd/batcat icons look wrong, install a Nerd Font on your terminal."
