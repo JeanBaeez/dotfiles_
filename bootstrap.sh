@@ -100,7 +100,7 @@ case "$PM" in
   dnf)
     PACKAGES=(
       zsh zsh-syntax-highlighting zsh-autosuggestions
-      lsd bat fzf ripgrep fd-find jq ncdu tldr
+      lsd bat fzf ripgrep fd-find jq ncdu tealdeer
       htop btop
       tmux git git-delta gh zoxide direnv
       bind-utils traceroute mtr whois net-tools rsync mosh httpie
@@ -121,13 +121,15 @@ case "$PM" in
     ;;
 esac
 
+# RHEL-likes need EPEL for many of these tools. Enable it BEFORE the upgrade so
+# the refresh below also fetches EPEL's metadata (harmless no-op on Fedora).
+if [[ "$PM" == "dnf" ]]; then
+  log "Enabling EPEL (for RHEL/Rocky/Alma; no-op on Fedora)"
+  $SUDO dnf install -y epel-release || warn "epel-release not available; EPEL-only packages may be skipped"
+fi
+
 log "Updating system packages (update + upgrade)"
 pm_update_upgrade
-
-# RHEL-likes need EPEL for many of these tools (no-op / harmless on Fedora).
-if [[ "$PM" == "dnf" ]]; then
-  $SUDO dnf install -y epel-release 2>/dev/null || true
-fi
 
 log "Installing packages: ${PACKAGES[*]}"
 if ! pm_install "${PACKAGES[@]}"; then
@@ -233,11 +235,17 @@ install_tmux_config() {
     run_as_target git -C "$omt" pull --ff-only || warn "tmux config update failed (keeping existing)"
   else
     log "Cloning Oh My Tmux! into $omt"
-    [[ -e "$omt" ]] && mv "$omt" "${omt}.bak.${TIMESTAMP}"
+    # -e is false for a dangling symlink, so also test -L to catch broken links.
+    [[ -e "$omt" || -L "$omt" ]] && mv "$omt" "${omt}.bak.${TIMESTAMP}"
     if ! run_as_target git clone --depth 1 https://github.com/gpakosz/.tmux.git "$omt"; then
       warn "tmux config clone failed; skipping tmux setup"
       return 0
     fi
+  fi
+  # Back up a pre-existing real ~/.tmux.conf (not a symlink) before we replace it.
+  if [[ -e "$TARGET_HOME/.tmux.conf" && ! -L "$TARGET_HOME/.tmux.conf" ]]; then
+    log "Backing up existing $TARGET_HOME/.tmux.conf -> .bak.${TIMESTAMP}"
+    mv "$TARGET_HOME/.tmux.conf" "$TARGET_HOME/.tmux.conf.bak.${TIMESTAMP}"
   fi
   run_as_target ln -sf "$omt/.tmux.conf" "$TARGET_HOME/.tmux.conf"
   backup_then_copy "$DOTFILES_DIR/.tmux.conf.local" "$TARGET_HOME/.tmux.conf.local"
