@@ -23,7 +23,7 @@ sudo TARGET_USER=alice ./bootstrap.sh
 
 The script will:
 
-1. Detect the package manager (apt / dnf / pacman), then **update + upgrade** the system and install shell, plugins, and quality-of-life CLI tools. Packages install **one-at-a-time behind a live progress bar** (`[####----]  40% (7/17) installing …`) instead of the package manager's default wall of text — on a non-interactive/CI shell it falls back to one clean line per package.
+1. Detect the package manager (apt / dnf / pacman), then **update + upgrade** the system and install shell, plugins, and quality-of-life CLI tools. Packages install **one-at-a-time behind a live progress bar** (`[###---------]  17% (7/41) installing …`) instead of the package manager's default wall of text — on a non-interactive/CI shell it falls back to one clean line per package.
    - shell: `zsh zsh-syntax-highlighting zsh-autosuggestions`
    - files/text: `lsd bat fzf ripgrep fd jq ncdu tldr`
    - monitors: `htop btop`
@@ -35,11 +35,11 @@ The script will:
    - base: `curl ca-certificates tar unzip`
 
    (Exact package names are mapped per-distro inside `bootstrap.sh`; on RHEL-likes it also enables EPEL.)
-2. Download the latest Neovim release tarball from GitHub and install it to `/opt/nvim` (symlink at `/usr/local/bin/nvim`). Distro `neovim` is usually too old for LazyVim (needs ≥ 0.11.2).
-3. Download the latest `lazygit` release tarball into `/usr/local/bin/lazygit`.
+2. Download the latest `lazygit` release tarball into `/usr/local/bin/lazygit`.
+3. Download the latest Neovim release tarball from GitHub and install it to `/opt/nvim` (symlink at `/usr/local/bin/nvim`). Distro `neovim` is usually too old for LazyVim (needs ≥ 0.11.2).
 4. Install the **FiraCode Nerd Font** (ligatures + icon glyphs) per-user into `~/.local/share/fonts` and refresh the font cache. See [Icons & ligatures](#icons--ligatures-nerd-font) — the font must also be selected in your **local** terminal.
-5. Install [Oh My Tmux!](https://github.com/gpakosz/.tmux): clone it to `~/.tmux`, symlink `~/.tmux.conf`, and drop our customized `~/.tmux.conf.local` (mouse on, OS clipboard, retain cwd).
-6. Copy `.zshrc` and `.config/nvim/` into your `$HOME` (backups: `.bak.<timestamp>`).
+5. Copy `.zshrc` and `.config/nvim/` into your `$HOME` (backups: `.bak.<timestamp>`).
+6. Install [Oh My Tmux!](https://github.com/gpakosz/.tmux): clone it to `~/.tmux`, symlink `~/.tmux.conf`, and drop our customized `~/.tmux.conf.local` (mouse on, OS clipboard, retain cwd).
 7. `chsh -s $(which zsh)` to make zsh the default shell.
 8. Configure git to use `delta` as the diff pager.
 9. Run `nvim --headless "+Lazy! sync"` to pre-install plugins.
@@ -47,7 +47,7 @@ The script will:
 Goodies you get in the shell:
 - `z <dir-fragment>` — jump (zoxide)
 - `lg` — lazygit
-- `cat` is `batcat`, and `ls`/`l`/`ll`/`la`/`lla` are [`lsd`](https://github.com/lsd-rs/lsd) with icons + git status (`lt` = tree view)
+- `cat` is `bat` (the binary is named `batcat` on Debian/Ubuntu/Kali), and `ls`/`l`/`ll`/`la`/`lla` are [`lsd`](https://github.com/lsd-rs/lsd) with icons (`lt` = tree view)
 - `delta` powers `git diff` / `git log -p`
 - `tmux` with Oh My Tmux! — customize via `~/.tmux.conf.local`
 

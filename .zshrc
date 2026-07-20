@@ -58,9 +58,18 @@ ip_addresses() {
     echo "Public IP:  $(curl -s https://ifconfig.me)"
 }
 alias jota='ip_addresses'
-alias cat='batcat'
-alias catn='bat --style=plain'
-alias catnp='bat --style=plain --paging=never'
+# bat's binary is `batcat` on Debian/Ubuntu/Kali (apt) but `bat` on Fedora/RHEL (dnf) and Arch (pacman).
+if command -v batcat >/dev/null 2>&1; then
+    _bat_bin='batcat'
+elif command -v bat >/dev/null 2>&1; then
+    _bat_bin='bat'
+fi
+if [ -n "${_bat_bin:-}" ]; then
+    alias cat="$_bat_bin"
+    alias catn="$_bat_bin --style=plain"
+    alias catnp="$_bat_bin --style=plain --paging=never"
+fi
+unset _bat_bin
 alias mkt='/usr/local/bin/mkt'
 # NOTE: ls/lsd aliases live in the "goodies" block at the bottom of this file so
 # they win over Kali's default coreutils `ls` aliases (which are defined later).
@@ -352,7 +361,7 @@ command -v fdfind >/dev/null 2>&1 && alias fd='fdfind'
 # lazygit alias
 command -v lazygit >/dev/null 2>&1 && alias lg='lazygit'
 
-# lsd: a modern `ls` with icons + git status. Defined LAST so these win over the
+# lsd: a modern `ls` with icons (`lt` = tree). Defined LAST so these win over the
 # coreutils `ls` aliases defined earlier in this file. Icons need a Nerd Font in
 # your *local* terminal (bootstrap.sh installs FiraCode Nerd Font on the box; you
 # still have to point your terminal at it — see the README).

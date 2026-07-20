@@ -235,11 +235,16 @@ install_lazygit() {
   url="https://github.com/jesseduffield/lazygit/releases/download/v${ver}/lazygit_${ver}_Linux_${lg_arch}.tar.gz"
   tmpdir="$(mktemp -d)"
   log "Downloading lazygit $ver"
-  curl -fsSL "$url" -o "$tmpdir/lazygit.tar.gz"
-  tar -C "$tmpdir" -xzf "$tmpdir/lazygit.tar.gz" lazygit
-  $SUDO install -m 0755 "$tmpdir/lazygit" /usr/local/bin/lazygit
+  # Catch download/extract failures explicitly so a network hiccup skips lazygit
+  # instead of aborting the whole bootstrap, and so $tmpdir is always cleaned up.
+  if curl -fsSL "$url" -o "$tmpdir/lazygit.tar.gz" \
+     && tar -C "$tmpdir" -xzf "$tmpdir/lazygit.tar.gz" lazygit; then
+    $SUDO install -m 0755 "$tmpdir/lazygit" /usr/local/bin/lazygit
+    log "lazygit installed: $(/usr/local/bin/lazygit --version 2>&1 | head -1)"
+  else
+    warn "lazygit download/extract failed; skipping"
+  fi
   rm -rf "$tmpdir"
-  log "lazygit installed: $(/usr/local/bin/lazygit --version 2>&1 | head -1)"
 }
 
 # Latest Neovim from upstream (distro Neovim is too old for LazyVim).
@@ -251,18 +256,33 @@ install_neovim() {
 
   url="https://github.com/neovim/neovim/releases/latest/download/nvim-linux-${nvim_arch}.tar.gz"
   tmpdir="$(mktemp -d)"
-
   log "Downloading Neovim ($nvim_arch) from $url"
-  curl -fsSL "$url" -o "$tmpdir/nvim.tar.gz"
-
-  $SUDO rm -rf /opt/nvim
-  $SUDO mkdir -p /opt
-  $SUDO tar -C /opt -xzf "$tmpdir/nvim.tar.gz"
-  $SUDO mv "/opt/nvim-linux-${nvim_arch}" /opt/nvim
-  $SUDO ln -sf /opt/nvim/bin/nvim /usr/local/bin/nvim
-
+  # Catch the download explicitly (the flaky, network-bound step) so a hiccup
+  # skips Neovim rather than aborting the bootstrap, and $tmpdir is cleaned up.
+  if curl -fsSL "$url" -o "$tmpdir/nvim.tar.gz"; then
+    $SUDO rm -rf /opt/nvim
+    $SUDO mkdir -p /opt
+    $SUDO tar -C /opt -xzf "$tmpdir/nvim.tar.gz"
+    $SUDO mv "/opt/nvim-linux-${nvim_arch}" /opt/nvim
+    $SUDO ln -sf /opt/nvim/bin/nvim /usr/local/bin/nvim
+    log "Neovim installed: $(/usr/local/bin/nvim --version | head -1)"
+  else
+    warn "Neovim download failed; skipping (LazyVim needs Neovim >= 0.11.2 — re-run to retry)"
+  fi
   rm -rf "$tmpdir"
-  log "Neovim installed: $(/usr/local/bin/nvim --version | head -1)"
+}
+
+# Reclaim ownership of the ~/.local tree that a root-for-user `mkdir -p` may have
+# created as root, so the target user can later create nvim data/state dirs.
+# Non-recursive on the parents to avoid clobbering unrelated pre-existing
+# subtrees. Tolerant of failures (a purely cosmetic font step must never abort
+# the whole bootstrap) and a no-op when we're already the target user.
+reclaim_local_ownership() {
+  [[ "$TARGET_USER" != "$(id -un)" ]] || return 0
+  chown -R "$TARGET_USER:$TARGET_GROUP" "$TARGET_HOME/.local/share/fonts" 2>/dev/null || true
+  [[ -d "$TARGET_HOME/.local/share" ]] && chown "$TARGET_USER:$TARGET_GROUP" "$TARGET_HOME/.local/share" 2>/dev/null || true
+  [[ -d "$TARGET_HOME/.local" ]] && chown "$TARGET_USER:$TARGET_GROUP" "$TARGET_HOME/.local" 2>/dev/null || true
+  return 0
 }
 
 # FiraCode Nerd Font — provides programming ligatures and the icon glyphs that
@@ -285,28 +305,22 @@ install_nerd_font() {
   url="$(nerd_font_url FiraCode)"
   tmpdir="$(mktemp -d)"
   log "Downloading FiraCode Nerd Font"
-  if ! curl -fsSL "$url" -o "$tmpdir/FiraCode.zip"; then
-    warn "FiraCode Nerd Font download failed; skipping (icons/ligatures unaffected on client)"
-    rm -rf "$tmpdir"
-    return 0
+  # Chain the fallible steps; on any failure warn and fall through to cleanup.
+  # `mkdir -p "$font_dir"` may create ~/.local[/share] as root in the sudo path,
+  # so reclaim_local_ownership + tmpdir cleanup run on EVERY exit path below —
+  # explicitly (no RETURN trap, which would surprisingly re-fire on main's return).
+  if curl -fsSL "$url" -o "$tmpdir/FiraCode.zip" \
+     && mkdir -p "$font_dir" \
+     && unzip -o -q "$tmpdir/FiraCode.zip" -d "$tmpdir/extract" \
+     && find "$tmpdir/extract" -type f -name '*.ttf' -exec cp -f {} "$font_dir/" \; ; then
+    reclaim_local_ownership
+    run_as_target fc-cache -f "$font_dir" >/dev/null 2>&1 || fc-cache -f >/dev/null 2>&1 || true
+    log "FiraCode Nerd Font installed ($font_dir)"
+  else
+    warn "FiraCode Nerd Font install failed; skipping (icons/ligatures unaffected on the client terminal)"
+    reclaim_local_ownership
   fi
-
-  mkdir -p "$font_dir"
-  if ! unzip -o -q "$tmpdir/FiraCode.zip" -d "$tmpdir/extract"; then
-    warn "Could not unzip FiraCode Nerd Font; skipping"
-    rm -rf "$tmpdir"
-    return 0
-  fi
-  # Copy every packaged .ttf (regular + Mono/Propo variants) into the font dir.
-  find "$tmpdir/extract" -type f -name '*.ttf' -exec cp -f {} "$font_dir/" \;
   rm -rf "$tmpdir"
-
-  # Own the font dir as the target user, then rebuild the font cache as them.
-  if [[ "$TARGET_USER" != "$(id -un)" ]]; then
-    chown -R "$TARGET_USER:$TARGET_GROUP" "$TARGET_HOME/.local/share/fonts" 2>/dev/null || true
-  fi
-  run_as_target fc-cache -f "$font_dir" >/dev/null 2>&1 || fc-cache -f >/dev/null 2>&1 || true
-  log "FiraCode Nerd Font installed ($font_dir)"
 }
 
 # --- Dotfiles copy -----------------------------------------------------------
