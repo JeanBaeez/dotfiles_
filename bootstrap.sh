@@ -227,7 +227,7 @@ install_lazygit() {
     return 0
   fi
   local lg_arch ver tmpdir url
-  if ! lg_arch="$(map_arch)"; then
+  if ! lg_arch="$(map_arch "$(uname -m)")"; then
     warn "Unsupported arch '$(uname -m)' for lazygit; skipping"; return 0
   fi
   # `|| true` so a failed API call / rate-limit / no-match leaves $ver empty and
@@ -253,7 +253,7 @@ install_lazygit() {
 # Latest Neovim from upstream (distro Neovim is too old for LazyVim).
 install_neovim() {
   local nvim_arch url tmpdir
-  if ! nvim_arch="$(map_arch)"; then
+  if ! nvim_arch="$(map_arch "$(uname -m)")"; then
     warn "Unsupported arch '$(uname -m)' for Neovim binary; skipping"; return 0
   fi
 
