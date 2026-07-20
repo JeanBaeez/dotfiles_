@@ -230,7 +230,10 @@ install_lazygit() {
   if ! lg_arch="$(map_arch)"; then
     warn "Unsupported arch '$(uname -m)' for lazygit; skipping"; return 0
   fi
-  ver="$(curl -fsSL https://api.github.com/repos/jesseduffield/lazygit/releases/latest | grep -oP '"tag_name":\s*"v?\K[^"]+' | head -1)"
+  # `|| true` so a failed API call / rate-limit / no-match leaves $ver empty and
+  # hits the guard below, instead of the non-zero pipeline aborting main under
+  # `set -euo pipefail` before the guard can run.
+  ver="$(curl -fsSL https://api.github.com/repos/jesseduffield/lazygit/releases/latest 2>/dev/null | grep -oP '"tag_name":\s*"v?\K[^"]+' | head -1 || true)"
   if [[ -z "$ver" ]]; then warn "Could not resolve latest lazygit version; skipping"; return 0; fi
   url="https://github.com/jesseduffield/lazygit/releases/download/v${ver}/lazygit_${ver}_Linux_${lg_arch}.tar.gz"
   tmpdir="$(mktemp -d)"
@@ -257,17 +260,18 @@ install_neovim() {
   url="https://github.com/neovim/neovim/releases/latest/download/nvim-linux-${nvim_arch}.tar.gz"
   tmpdir="$(mktemp -d)"
   log "Downloading Neovim ($nvim_arch) from $url"
-  # Catch the download explicitly (the flaky, network-bound step) so a hiccup
-  # skips Neovim rather than aborting the bootstrap, and $tmpdir is cleaned up.
-  if curl -fsSL "$url" -o "$tmpdir/nvim.tar.gz"; then
-    $SUDO rm -rf /opt/nvim
-    $SUDO mkdir -p /opt
-    $SUDO tar -C /opt -xzf "$tmpdir/nvim.tar.gz"
-    $SUDO mv "/opt/nvim-linux-${nvim_arch}" /opt/nvim
-    $SUDO ln -sf /opt/nvim/bin/nvim /usr/local/bin/nvim
+  # Chain ALL fallible steps (not just curl) so any failure — a renamed upstream
+  # tarball dir, a corrupt asset, a full disk — warns and skips Neovim instead of
+  # aborting the whole bootstrap under `set -e`, and $tmpdir is always cleaned up.
+  if curl -fsSL "$url" -o "$tmpdir/nvim.tar.gz" \
+     && $SUDO mkdir -p /opt \
+     && $SUDO tar -C /opt -xzf "$tmpdir/nvim.tar.gz" \
+     && $SUDO rm -rf /opt/nvim \
+     && $SUDO mv "/opt/nvim-linux-${nvim_arch}" /opt/nvim \
+     && $SUDO ln -sf /opt/nvim/bin/nvim /usr/local/bin/nvim; then
     log "Neovim installed: $(/usr/local/bin/nvim --version | head -1)"
   else
-    warn "Neovim download failed; skipping (LazyVim needs Neovim >= 0.11.2 — re-run to retry)"
+    warn "Neovim install failed; skipping (LazyVim needs Neovim >= 0.11.2 — re-run to retry)"
   fi
   rm -rf "$tmpdir"
 }
@@ -312,7 +316,10 @@ install_nerd_font() {
   if curl -fsSL "$url" -o "$tmpdir/FiraCode.zip" \
      && mkdir -p "$font_dir" \
      && unzip -o -q "$tmpdir/FiraCode.zip" -d "$tmpdir/extract" \
-     && find "$tmpdir/extract" -type f -name '*.ttf' -exec cp -f {} "$font_dir/" \; ; then
+     && find "$tmpdir/extract" -type f -name '*.ttf' -exec cp -f {} "$font_dir/" \; \
+     && compgen -G "$font_dir/*.ttf" >/dev/null; then
+    # `find -exec cp` exits 0 even if it copied nothing, so re-check that at least
+    # one .ttf actually landed before claiming success (avoids a false log line).
     reclaim_local_ownership
     run_as_target fc-cache -f "$font_dir" >/dev/null 2>&1 || fc-cache -f >/dev/null 2>&1 || true
     log "FiraCode Nerd Font installed ($font_dir)"

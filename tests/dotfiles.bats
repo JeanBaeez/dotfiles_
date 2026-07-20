@@ -91,3 +91,17 @@ setup() {
   run grep -qiE "local terminal|terminal font" "$README"
   [ "$status" -eq 0 ]
 }
+
+@test ".zshrc: cat/catn/catnp derive from a single detected bat binary (batcat or bat)" {
+  # The bat alias block is the cross-distro sibling of the lsd fix: batcat on
+  # apt, bat on dnf/pacman. All three aliases must use the one detected binary,
+  # and no stale unconditional 'alias cat=batcat' (broken on dnf/pacman) may remain.
+  run grep -E "command -v batcat" "$ZSHRC";          [ "$status" -eq 0 ]
+  run grep -E "command -v bat >/dev/null" "$ZSHRC";  [ "$status" -eq 0 ]
+  run grep -F 'alias cat="$_bat_bin"' "$ZSHRC";                        [ "$status" -eq 0 ]
+  run grep -F 'alias catn="$_bat_bin --style=plain"' "$ZSHRC";         [ "$status" -eq 0 ]
+  run grep -F 'alias catnp="$_bat_bin --style=plain --paging=never"' "$ZSHRC"; [ "$status" -eq 0 ]
+  # no stale hardcoded aliases
+  run grep -E "^alias cat='batcat'" "$ZSHRC";  [ "$status" -ne 0 ]
+  run grep -E "^alias catn='bat " "$ZSHRC";    [ "$status" -ne 0 ]
+}

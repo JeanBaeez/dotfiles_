@@ -366,3 +366,41 @@ stub_command_for() {
   [ "$status" -ne 0 ]
   [ -z "$output" ]
 }
+
+# --- install_nerd_font / reclaim_local_ownership ----------------------------
+
+@test "install_nerd_font: short-circuits when the font is already present" {
+  TARGET_HOME="$(mktemp -d)"; TARGET_USER="$(id -un)"; TARGET_GROUP="$(id -gn)"
+  mkdir -p "$TARGET_HOME/.local/share/fonts/FiraCodeNerdFont"
+  : > "$TARGET_HOME/.local/share/fonts/FiraCodeNerdFont/FiraCode.ttf"
+  # If it tried to download, curl would run; stub it to shout so we'd notice.
+  curl() { echo "CURL CALLED"; return 1; }
+  run install_nerd_font
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"already installed"* ]]
+  [[ "$output" != *"CURL CALLED"* ]]
+  rm -rf "$TARGET_HOME"
+}
+
+@test "reclaim_local_ownership: is a no-op (no chown) when installing for the current user" {
+  TARGET_USER="$(id -un)"; TARGET_HOME="$(mktemp -d)"; TARGET_GROUP="$(id -gn)"
+  # chown must never be invoked on the self-install path; stub it to shout.
+  chown() { echo "CHOWN CALLED"; return 0; }
+  run reclaim_local_ownership
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"CHOWN CALLED"* ]]
+  rm -rf "$TARGET_HOME"
+}
+
+# --- resolve_target ---------------------------------------------------------
+
+@test "resolve_target (non-root): sets SUDO=sudo and resolves the current user's home" {
+  if [[ ${EUID:-$(id -u)} -eq 0 ]]; then skip "running as root"; fi
+  if ! command -v getent >/dev/null 2>&1; then skip "no getent (non-Linux host)"; fi
+  unset TARGET_USER SUDO TARGET_HOME TARGET_GROUP
+  resolve_target   # call directly so it sets globals in this shell
+  [ "$SUDO" = "sudo" ]
+  [ "$TARGET_USER" = "$USER" ]
+  [ -d "$TARGET_HOME" ]
+  [ -n "$TARGET_GROUP" ]
+}
