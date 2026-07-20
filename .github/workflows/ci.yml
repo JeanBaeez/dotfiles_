@@ -1,0 +1,29 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck, bats, zsh
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y shellcheck bats zsh
+
+      - name: Syntax check bootstrap.sh
+        run: bash -n bootstrap.sh
+
+      - name: ShellCheck bootstrap.sh
+        run: shellcheck -S warning bootstrap.sh
+
+      - name: Syntax check .zshrc
+        run: zsh -n .zshrc
+
+      - name: Run bats unit tests
+        run: bats tests/
