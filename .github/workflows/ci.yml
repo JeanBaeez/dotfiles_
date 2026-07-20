@@ -1,0 +1,38 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install bats, zsh
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y bats zsh
+
+      - name: Install pinned shellcheck (match local dev version)
+        env:
+          SC_VERSION: v0.11.0
+        run: |
+          curl -fsSL "https://github.com/koalaman/shellcheck/releases/download/${SC_VERSION}/shellcheck-${SC_VERSION}.linux.x86_64.tar.xz" \
+            | tar -xJ
+          sudo install -m 0755 "shellcheck-${SC_VERSION}/shellcheck" /usr/local/bin/shellcheck
+          shellcheck --version
+
+      - name: Syntax check bootstrap.sh
+        run: bash -n bootstrap.sh
+
+      - name: ShellCheck bootstrap.sh
+        run: shellcheck -S warning bootstrap.sh
+
+      - name: Syntax check .zshrc
+        run: zsh -n .zshrc
+
+      - name: Run bats unit tests
+        run: bats tests/

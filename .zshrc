@@ -58,16 +58,21 @@ ip_addresses() {
     echo "Public IP:  $(curl -s https://ifconfig.me)"
 }
 alias jota='ip_addresses'
-alias cat='batcat'
-alias catn='bat --style=plain'
-alias catnp='bat --style=plain --paging=never'
-alias mkt='/usr/local/bin/mkt' 
-# ls
-alias ll='lsd -lh --group-dirs=aliasesfirst --icon always'
-alias la='lsd -a --group-dirs=first --icon always'
-alias l='lsd --group-dirs=first --icon always'
-alias lla='lsd -lha --group-dirs=first --icon always'
-alias ls='lsd --group-dirs=first --icon always'
+# bat's binary is `batcat` on Debian/Ubuntu/Kali (apt) but `bat` on Fedora/RHEL (dnf) and Arch (pacman).
+if command -v batcat >/dev/null 2>&1; then
+    _bat_bin='batcat'
+elif command -v bat >/dev/null 2>&1; then
+    _bat_bin='bat'
+fi
+if [ -n "${_bat_bin:-}" ]; then
+    alias cat="$_bat_bin"
+    alias catn="$_bat_bin --style=plain"
+    alias catnp="$_bat_bin --style=plain --paging=never"
+fi
+unset _bat_bin
+alias mkt='/usr/local/bin/mkt'
+# NOTE: ls/lsd aliases live in the "goodies" block at the bottom of this file so
+# they win over Kali's default coreutils `ls` aliases (which are defined later).
 
 
 
@@ -355,6 +360,19 @@ command -v fdfind >/dev/null 2>&1 && alias fd='fdfind'
 
 # lazygit alias
 command -v lazygit >/dev/null 2>&1 && alias lg='lazygit'
+
+# lsd: a modern `ls` with icons (`lt` = tree). Defined LAST so these win over the
+# coreutils `ls` aliases defined earlier in this file. Icons need a Nerd Font in
+# your *local* terminal (bootstrap.sh installs FiraCode Nerd Font on the box; you
+# still have to point your terminal at it — see the README).
+if command -v lsd >/dev/null 2>&1; then
+  alias ls='lsd --group-dirs first'
+  alias l='lsd --group-dirs first'
+  alias ll='lsd -lh --group-dirs first --icon always'
+  alias la='lsd -A --group-dirs first --icon always'
+  alias lla='lsd -lhA --group-dirs first --icon always'
+  alias lt='lsd --tree --depth 2 --icon always'
+fi
 
 # quick reload
 alias zshreload='source ~/.zshrc'
