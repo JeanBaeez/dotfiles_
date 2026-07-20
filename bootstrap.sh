@@ -433,15 +433,19 @@ main() {
   # 3b. tmux config
   install_tmux_config
 
-  # 4. Make zsh the default shell
+  # 4. Make zsh the default shell (only if zsh actually installed — the package
+  # install loop is tolerant of failures, so don't abort the whole run here).
   local zsh_bin current_shell
-  zsh_bin="$(command -v zsh)"
-  current_shell="$(getent passwd "$TARGET_USER" | cut -d: -f7)"
-  if [[ "$current_shell" != "$zsh_bin" ]]; then
-    log "Changing default shell to $zsh_bin for $TARGET_USER"
-    $SUDO chsh -s "$zsh_bin" "$TARGET_USER"
+  if ! zsh_bin="$(command -v zsh)"; then
+    warn "zsh not found (install may have failed); skipping default-shell change"
   else
-    log "Default shell already zsh for $TARGET_USER, skipping chsh"
+    current_shell="$(getent passwd "$TARGET_USER" | cut -d: -f7)"
+    if [[ "$current_shell" != "$zsh_bin" ]]; then
+      log "Changing default shell to $zsh_bin for $TARGET_USER"
+      $SUDO chsh -s "$zsh_bin" "$TARGET_USER"
+    else
+      log "Default shell already zsh for $TARGET_USER, skipping chsh"
+    fi
   fi
 
   # 4b. Configure git to use delta for diffs (if installed)
