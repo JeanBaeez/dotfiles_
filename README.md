@@ -42,7 +42,27 @@ The script will:
 6. Install [Oh My Tmux!](https://github.com/gpakosz/.tmux): clone it to `~/.tmux`, symlink `~/.tmux.conf`, and drop our customized `~/.tmux.conf.local` (mouse on, OS clipboard, retain cwd).
 7. `chsh -s $(which zsh)` to make zsh the default shell.
 8. Configure git to use `delta` as the diff pager.
-9. Run `nvim --headless "+Lazy! sync"` to pre-install plugins.
+9. Install Claude Code, my Claude skills, the UI skills they use, and the Codex CLI (see [Claude Code skills](#claude-code-skills)).
+10. Run `nvim --headless "+Lazy! sync"` to pre-install plugins.
+
+## Claude Code skills
+
+`bootstrap.sh` also sets up [Claude Code](https://claude.com/claude-code) for agentic work on the box:
+
+- **Claude Code** itself, through Anthropic's native installer, if it is not installed yet.
+- **My skills**, from `claude/skills/` into `~/.claude/skills/`:
+  - `feature-flow`: every new feature, the same way: branch from `dev`, prove it is feasible, UI material, your approval, then development, security, QA and resilience agents that must agree on each other's work.
+  - `babysit`: review across every SDLC dimension with a Codex second opinion, then stays on every agent and PR until done. `babysit ultra` for the deepest pass.
+- **The UI skills they use**, `ui-ux-pro-max` and `ui-styling` (MIT), fresh from [their upstream repo](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill).
+- **The Codex CLI** (`npm install -g @openai/codex`), which `babysit` asks for second opinions.
+
+Re-running replaces every skill with this repo's version; earlier copies go to `~/.claude/skills-backup/`, never next to the skills, where Claude Code would load them twice. Then, once per box: run `claude` and `/login` (or set `ANTHROPIC_API_KEY`), and `codex login`. Without Codex signed in, `babysit` still reviews and says it had no second opinion.
+
+To edit the skills, edit them here. On a workstation, link them instead of copying so edits take effect at once:
+
+```bash
+for s in ~/dotfiles/claude/skills/*/; do ln -sfn "$s" ~/.claude/skills/"$(basename "$s")"; done
+```
 
 Goodies you get in the shell:
 - `z <dir-fragment>` — jump (zoxide)

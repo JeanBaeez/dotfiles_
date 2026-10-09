@@ -379,6 +379,82 @@ install_tmux_config() {
   log "tmux config installed (~/.tmux.conf -> $omt/.tmux.conf, local at ~/.tmux.conf.local)"
 }
 
+# --- Claude Code skills -------------------------------------------------------
+# My own skills (claude/skills/*: feature-flow, babysit) and the two UI skills they
+# use (ui-ux-pro-max, ui-styling, MIT, from their upstream repo) go to
+# ~/.claude/skills, replaced on every run so a server always has this repo's version.
+# Earlier copies are moved to ~/.claude/skills-backup/, never left inside
+# ~/.claude/skills, where Claude Code would load them as duplicate skills.
+UI_SKILLS_REPO="${UI_SKILLS_REPO:-https://github.com/nextlevelbuilder/ui-ux-pro-max-skill.git}"
+UI_SKILLS=(ui-ux-pro-max ui-styling)
+
+# Replaces $dest with a copy of $src, moving any earlier copy to the backup folder.
+replace_skill() {
+  local src="$1" dest="$2" backups="$3"
+  if [[ -e "$dest" || -L "$dest" ]]; then
+    mkdir -p "$backups"
+    mv "$dest" "$backups/$(basename "$dest").${TIMESTAMP}"
+  fi
+  cp -R "$src" "$dest"
+  find "$dest" -name '*.sh' -exec chmod +x {} +
+}
+
+install_claude_skills() {
+  local dest="$TARGET_HOME/.claude/skills" backups="$TARGET_HOME/.claude/skills-backup" skill tmpdir
+  mkdir -p "$dest"
+  for skill in "$DOTFILES_DIR"/claude/skills/*/; do
+    skill="$(basename "$skill")"
+    replace_skill "$DOTFILES_DIR/claude/skills/$skill" "$dest/$skill" "$backups"
+    log "Claude skill installed: $skill"
+  done
+
+  tmpdir="$(mktemp -d)"
+  if git clone --quiet --depth 1 "$UI_SKILLS_REPO" "$tmpdir/ui" 2>/dev/null; then
+    for skill in "${UI_SKILLS[@]}"; do
+      if [[ -f "$tmpdir/ui/.claude/skills/$skill/SKILL.md" ]]; then
+        replace_skill "$tmpdir/ui/.claude/skills/$skill" "$dest/$skill" "$backups"
+        log "Claude skill installed: $skill (upstream)"
+      else
+        warn "Upstream has no $skill skill; skipping it"
+      fi
+    done
+  else
+    warn "Could not fetch the UI skills from $UI_SKILLS_REPO; feature-flow will work without them"
+  fi
+  rm -rf "$tmpdir"
+
+  if [[ "$TARGET_USER" != "$(id -un)" ]]; then
+    chown -R "$TARGET_USER:$TARGET_GROUP" "$TARGET_HOME/.claude"
+  fi
+}
+
+# Claude Code itself, through Anthropic's native installer, as the target user.
+install_claude_code() {
+  if run_as_target bash -lc 'command -v claude' >/dev/null 2>&1; then
+    log "Claude Code already installed: $(run_as_target bash -lc 'claude --version' 2>/dev/null | head -1)"
+    return 0
+  fi
+  log "Installing Claude Code (native installer) for $TARGET_USER"
+  run_as_target bash -c 'curl -fsSL https://claude.ai/install.sh | bash' >/dev/null 2>&1 \
+    || warn "Claude Code install failed; install it later from https://claude.ai/install.sh"
+}
+
+# The Codex CLI, which the babysit skill asks for second opinions. Sign in once with
+# `codex login`; until then babysit reviews without it and says so.
+install_codex() {
+  if command -v codex >/dev/null 2>&1; then
+    log "Codex already installed: $(codex --version 2>/dev/null | head -1)"
+    return 0
+  fi
+  if ! command -v npm >/dev/null 2>&1; then
+    warn "npm not found; skipping the Codex CLI"
+    return 0
+  fi
+  log "Installing the Codex CLI (npm, global)"
+  $SUDO npm install -g @openai/codex >/dev/null 2>&1 \
+    || warn "Codex CLI install failed (it needs a recent Node.js); babysit will review without a second opinion"
+}
+
 # --- Orchestration -----------------------------------------------------------
 main() {
   set -euo pipefail
@@ -433,6 +509,11 @@ main() {
   # 3b. tmux config
   install_tmux_config
 
+  # 3c. Claude Code, its skills, and Codex for babysit's second opinions
+  install_claude_code
+  install_claude_skills
+  install_codex
+
   # 4. Make zsh the default shell (only if zsh actually installed — the package
   # install loop is tolerant of failures, so don't abort the whole run here).
   local zsh_bin current_shell
@@ -466,6 +547,8 @@ main() {
   log "tmux: Oh My Tmux! installed — prefix is C-b (and C-a); edit ~/.tmux.conf.local to customize"
   log "Goodies: z (zoxide) | lg (lazygit) | fd (fdfind) | direnv | btop/htop | ncdu | jq | tldr <cmd>"
   log "Net: dig/host/nslookup | traceroute/mtr | whois | rsync/mosh/httpie | age (encrypt) | pwgen"
+  log "Claude: skills feature-flow, babysit, ui-ux-pro-max, ui-styling in ~/.claude/skills"
+  log "        sign in once: 'claude' then '/login'; 'codex login' for babysit's second opinion"
   log "Icons: FiraCode Nerd Font installed on this box; set your LOCAL terminal font to"
   log "       'FiraCode Nerd Font' so lsd/lla icons + ligatures render (see README)."
 }
